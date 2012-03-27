@@ -1,10 +1,42 @@
 # According to the ideas of http://lists.canonical.org/pipermail/kragen-tol/2010-March/000912.html
 
 import numpy
+from collections import OrderedDict
 
-rest_answer = "I don't know."
-default_answers = ["Yes", "No"]
+class open20q (object):
+   additional = ["I don't know."]
+   final = "Are you thinking of %s?"
+   YN = {"Yes.": 1., "No.": 0}
 
+   def __init__(self, items):
+      """
+      Parameters:
+      items   # {"Thing 1":
+                  {"Question 1":
+                    {"Answer 1.1": P(A1.1|T1),
+                     ...}
+                   ...}
+                 ...}
+      """
+      self.questions = OrderedDict()
+      max_answers = 2
+      self.items = items.keys()
+      for item in self.items:
+         items[item].setdefault(self.final%item, YN)
+      for questions in items.values():
+         for (question, answers) in questions.iteritems():
+            known_answers = self.questions.setdefault(question, additional[:])
+            for answer in answers:
+               if answer not in known_answers:
+                  known_answers.append(answer)
+            max_answers = max(max_answers, len(known_answers))
+      self.connections = numpy.zeros((len(items), len(self.questions), max_answers))
+      for i, item in enumerate(self.items):
+         for q, (question, answers) in enumerate(self.questions.iteritems()):
+            for a in xrange(len(answers)):
+               self.connections[q, a, i] = items.get(item, {}).get(question, {}).get(answers[a], 0)
+      
+            
 items = [
     "1","2","3","4","5","6","7","8","9","0"
     ]
