@@ -1,0 +1,5 @@
+* Of course, there is no proper UI yet. (But I don't find that so important.)
+* Make it better scalable.
+* Improve answer interpretation.
+* It might be interesting to put Bayesian network structure learning in, in order to improve “understanding” of facts like in the implemented example that something is odd iff it is not even. (At the moment, this is a problem when entering new items or questions.)
+* Make the guess() method more flexible, so that this can be used as identification key core, too.
