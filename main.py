@@ -106,7 +106,7 @@ class open20q (object):
                 a = 0
         return a
         
-    def guess(self, max_questions=20):
+    def identify(self, max_questions=20):
         P_X = self.item_frequencies
         answers = {}
         X = None
@@ -273,4 +273,4 @@ numbers = open20q({
           "Is X prime?": No}
     })
  
-numbers.guess()
+numbers.identify()
