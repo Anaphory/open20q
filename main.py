@@ -34,7 +34,7 @@ def xlogx(x):
     return x * l
 
 def rbr(Ps):
-    # remaining entropy in bits
+    # entropy in ~1.4 bits
     Ps = numpy.asarray(Ps)
     Ps /= sum(Ps)
     Ps[numpy.isnan(Ps)] = 0
@@ -115,13 +115,6 @@ class open20q (object):
             for i, item in enumerate(self.items):
                 print item, P_X[i],
             print
-
-            P_QA = numpy.tensordot(self.connections, P_X, 1)
-            P_XQA = bayes(self.connections, P_X, P_QA)
-            rbrs = rbr_after_answer(P_QA, P_XQA)
-            for q in answers.keys():
-                rbrs[q] = numpy.inf
-            q = rbrs.argmin()
             entropy = rbr(P_X)
             if entropy < 1 or counter == max_questions-1:
                 X = P_X.argmax()
@@ -132,14 +125,20 @@ class open20q (object):
                 if entropy == 0:
                     break
             else:
+                P_QA = numpy.tensordot(self.connections, P_X, 1)
+                P_XQA = bayes(self.connections, P_X, P_QA)
                 if numpy.random.random()<self.epsilon:
                     print "Random Question:"
                     q = numpy.random.randint(len(self.questions))
                 else:
+                    rbrs = rbr_after_answer(P_QA, P_XQA)
+                    for q in answers.keys():
+                        rbrs[q] = numpy.inf
+                    q = rbrs.argmin()
                     print "Best Question:"
                 question, q_answers = self.questions.items()[q]
                 a = self.ask(question, q_answers)
-                answers[q] = numpy.zeros(3)
+                answers[q] = numpy.zeros(self.max_answers)
                 answers[q][a] = 1
                 P_X = P_XQA[:, q, a]
 
