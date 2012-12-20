@@ -28,19 +28,24 @@ import numpy
 from collections import OrderedDict
 
 def xlogx(x):
+    """Calculate x*log(x) for x array-like, continually extended to 0."""
     x = numpy.asarray(x)
     l = numpy.zeros_like(x)
     l[x>0] = numpy.log(x[x>0])
     return x * l
 
-def rbr(Ps):
-    # entropy in ~1.4 bits
+def entropy(Ps):
+    """Calculate the 'Remaining Bit Rate' of the given probabilities.
+
+    That is, the entropy measured in 0.693 bits (i.e. using log instead of lg_2)
+    """
     Ps = numpy.asarray(Ps)
     Ps /= sum(Ps)
     Ps[numpy.isnan(Ps)] = 0
     return -sum(xlogx(Ps)) #/log(2), but that is a constant
 
 def bayes(P_X_given_Y, P_Y, P_X):
+    """Given P(X|Y), P(Y) and P(X), calculate P(Y|X)."""
     P_X_given_Y = numpy.asarray(P_X_given_Y)
     P_Y = numpy.asarray(P_Y)
     P_X = numpy.asarray(P_X)
@@ -52,16 +57,30 @@ def bayes(P_X_given_Y, P_Y, P_X):
     yx.shape = (P_Y.shape+P_X.shape)
     return yx
 
-def rbr_after_answer(P_QA, P_XQA):
+def entropy_after_answer(P_QA, P_XQA):
+    """Given the probabilities of all answers to all questions, calculate the expected entropy after getting an answer to every question."""
     # There might be a more transparent formula.
-    return sum((P_QA * rbr(P_XQA)).transpose())
+    # Use .sum(axes=) instead of sum(.transpose) ?
+    return sum((P_QA * entropy(P_XQA)).transpose())
 
 class open20q (object):
+
+    #additional answer to be displayed
     additional = ["I don't know."]
+    
+    #conclusive question
     final = "Are you thinking of %s?"
+
+    #generic answers
     Yes = {"Yes.": 1., "No.": 0.}
     No = {"Yes.": 0., "No.": 1.}
+
+    #probability for a totally random question
     epsilon = 0.05
+
+    #Always assume that this many games have led to the current
+    #data. (This is something like a weight factor for the current
+    #game.)
     n = 50
 
     def __init__(self, items):
@@ -75,8 +94,10 @@ class open20q (object):
                    ...}
         """
         self.questions = OrderedDict()
-        max_answers = 2
-        self.items = items.keys()
+        max_answers = 3 #As in, one additional question, and every Question has at least two answers, otherwise we would not ask.
+        self.items = items.keys() #The keys of the dictionary passed are the items to be identified.
+
+        #Build a database of questions
         for questions in items.values():
             for (question, answers) in questions.iteritems():
                 known_answers = self.questions.setdefault(question, self.additional[:])
@@ -111,18 +132,18 @@ class open20q (object):
         answers = {}
         X = None
         for counter in xrange(max_questions):
-            print rbr(P_X)
+            print entropy(P_X)
             for i, item in enumerate(self.items):
                 print item, P_X[i],
             print
-            entropy = rbr(P_X)
-            if entropy < 1 or counter == max_questions-1:
+            entr = entropy(P_X)
+            if entr < 1 or counter == max_questions-1:
                 X = P_X.argmax()
                 if self.ask(self.final%self.items[X], ["No.", "Yes."]):
                     break
                 P_X[X] = 0
                 X = None
-                if entropy == 0:
+                if entr == 0:
                     break
             else:
                 P_QA = numpy.tensordot(self.connections, P_X, 1)
@@ -131,10 +152,10 @@ class open20q (object):
                     print "Random Question:"
                     q = numpy.random.randint(len(self.questions))
                 else:
-                    rbrs = rbr_after_answer(P_QA, P_XQA)
+                    entropys = entropy_after_answer(P_QA, P_XQA)
                     for q in answers.keys():
-                        rbrs[q] = numpy.inf
-                    q = rbrs.argmin()
+                        entropys[q] = numpy.inf
+                    q = entropys.argmin()
                     print "Best Question:"
                 question, q_answers = self.questions.items()[q]
                 a = self.ask(question, q_answers)
