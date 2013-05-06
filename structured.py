@@ -219,13 +219,6 @@ class Open20Q (object):
 
     def __init__(self, items, bayes_network):
         """
-        Parameters:
-        items   # {"Thing 1":
-                    {"Question 1":
-                      {"Answer 1.1": P(A1.1|T1),
-                       ...}
-                     ...}
-                   ...}
         """
         self.net = bayes_network
         for name, vertex in self.net.BNet.v.iteritems():
@@ -234,7 +227,7 @@ class Open20Q (object):
 
         self.items = items #The keys of the dictionary passed are the items to be identified.
         
-        self.learner = OpenBayes.learning.EMLearningEngine(
+        self.learner = OpenBayes.learning.SEMLearningEngine(
             self.net.BNet)
         
         self.cases = self.net.BNet.Sample(10000)
@@ -274,10 +267,11 @@ class Open20Q (object):
                 print item, P_X[i],
             print
             entr = entropy(P_X)
-            print ev
+            entropies = entropy_after_answer(self.net, ev)
+            print entropies
             if (entr < 1 or
                 counter == max_questions-1 or 
-                not (set(self.net.BNet.v) - set(ev))
+                not entropies
                 ):
                 X = P_X.argmax()
                 if self.ask(self.final%self.items[X], ["No.", "Yes."]):
@@ -287,11 +281,8 @@ class Open20Q (object):
             else:
                 if numpy.random.random()<self.epsilon:
                     print "Random Question:"
-                    questions = [key for key in self.net.BNet.v
-                                 if key != "numbers"]
-                    question = questions[numpy.random.randint(len(questions))]
+                    question = entropies.keys()[numpy.random.randint(len(entropies))]
                 else:
-                    entropies = entropy_after_answer(self.net, ev)
                     print entropies
                     question = min(entropies, key=entropies.get)
                     print "Best Question:"
@@ -318,28 +309,34 @@ class Open20Q (object):
             { node: answers.get(node, "?") 
               for node in self.net.BNet.v })
 
-        self.learner.EMLearning(self.cases, 1)
+        self.learner.SEMLearning(self.cases, 1)
 
     def add_item(self, answers, item):
         self.items.append(item)
-        self.net.BNet.v["numbers"].nvalues += 1
-        self.net.BNet.v["numbers"].distribution.sizes[0] += 1
-        self.net.BNet.v["numbers"].distribution.cpt = (
+        root = self.net.BNet.v["numbers"]
+        root.nvalues += 1
+        root.distribution.sizes[0] += 1
+        root.distribution.cpt = (
             numpy.concatenate((
                 (1-1e-4) *
-                self.net.BNet.v["numbers"].distribution.cpt,
+                root.distribution.cpt,
                 [1e-4])))
         self.net.SetObs(answers.copy())
-        for dependent in self.net.BNet.v["numbers"].out_v:
-            probs = self.net.Marginalise(dependent.name).cpt
-            probs.shape = probs.shape + (1,)
-            dependent.distribution.cpt = (
-                numpy.concatenate((
-                        dependent.distribution.cpt,
-                        probs
-                        ), -1))
+        for dependent in root.out_v:
+            in_p = [edge._v[0]
+                    for edge in dependent._e
+                    ].index(root) + 1
+            s = list(dependent.distribution.cpt.shape)
+            s[in_p] = 1
+            s = tuple(s)
+            probs = 0.5*numpy.ones(s)
+            
+            dependent.distribution.cpt = numpy.concatenate((
+                    dependent.distribution.cpt,
+                    probs
+                    ), axis=in_p)
         self.net = JoinTree(self.net.BNet)
-        self.learner = OpenBayes.learning.EMLearningEngine(
+        self.learner = OpenBayes.learning.SEMLearningEngine(
             self.net.BNet)
 
     def add_question(self, question, parents = ["numbers"]):
@@ -354,12 +351,9 @@ class Open20Q (object):
 
         new.InitDistribution()
         self.net = JoinTree(network)
-        self.learner = OpenBayes.learning.EMLearningEngine(
+        self.learner = OpenBayes.learning.SEMLearningEngine(
             network)
   
-Yes = {"Yes.": 1., "No.": 0}
-No = {"Yes.": 0., "No.": 1}
-            
 numbers = Open20Q(range(10), join_tree)
 
 def run(n=1):
@@ -367,3 +361,6 @@ def run(n=1):
         numbers.net.SetObs({})
  
         numbers.identify()
+
+        if len(numbers.net.BNet.v) < 2*numpy.log(numbers.net.BNet.v["numbers"].nvalues)/numpy.log(2):
+            numbers.add_question(raw_input("Gimme a new question!"))
