@@ -1,6 +1,8 @@
 # open20q
 Bayes network with entropy maximiser for Twenty-Questions, Identification Key and similar games/utilities
 
+ - This repository contains an implementation of a *naïve* 20q Bayesian classifier, and the rough outlines (including literature) of the tools, methods and technology I intend to use to build it for questions that may have dependencies, using a Tree-Augmented Naive (TAN) Bayesian classifier.
+
 ## License
 All software in this repository, where not stated otherwise, should be considered under a 2-clause BSD license:
 
