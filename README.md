@@ -30,7 +30,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 ## Methodology
 
-Following [8]:
+Following [8]: (This is for building a fixed decision tree from the probability distribution represented by the Bayesian classifier. Depending on the problem – eg. while the network is still being trained, which for an online game could be always, that's why part of the bibliography below is concerned with that part – it can be useful to not build a tree, but to use a very similar algorithm to iterate through questions.)
 
 1. Start with the prior probabilities at the root node.
 
