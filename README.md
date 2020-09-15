@@ -2,6 +2,17 @@
 Bayes network with entropy maximiser for Twenty-Questions, Identification Key and similar games/utilities
 
  - This repository contains an implementation of a *naïve* 20q Bayesian classifier, and the rough outlines (including literature) of the tools, methods and technology I intend to use to build it for questions that may have dependencies, using a Tree-Augmented Naive (TAN) Bayesian classifier.
+ 
+## Notes
+People stumble over this repository with some regularity. Having come back to the idea
+time and again, I think that the dense representation of prior knowledge, which the
+approach descibed below needs, is *really naïve*. After all, I need to track about $N×Q$
+matrix entries to compute the best decision tree on the fly. That's far too big. So,
+please use this to understand the idea given below, see it implemented, and tell me if
+you have a solution that is less intensive on computation and memory. I would probably
+consider an actual tree-based method these days, but I have not found a good one to base
+a whole `open20q` on yet, because decision trees tend to have a different structure from
+this kind of expert system.
 
 ## License
 All software in this repository, where not stated otherwise, should be considered under a 2-clause BSD license:
